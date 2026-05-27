@@ -22,6 +22,7 @@ from core import views
 urlpatterns = [
     path('', views.index, name='index'),
     path('map/', views.map_view, name='map'),
+    path('auth/', include('core.urls')),
     path('admin/', admin.site.urls),
     path('__reload__/', include('django_browser_reload.urls')),
     path("", include("core.urls")),

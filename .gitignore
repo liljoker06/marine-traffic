@@ -35,6 +35,7 @@ ENV/
 # Variables d'environnement (SENSIBLE)
 # ──────────────────────────────────────────
 .env
+.env.example
 
 # ──────────────────────────────────────────
 # Django
