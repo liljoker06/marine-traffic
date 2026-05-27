@@ -14,12 +14,28 @@
             <li><a href="#" class="hover:text-blue-400 transition">Ports</a></li>
         </ul>
 
-        <!-- Actions -->
+        <!-- Auth Actions -->
         <div class="flex items-center gap-3">
-            <a href="#" class="text-sm text-gray-300 hover:text-white transition">Connexion</a>
-            <a href="#" class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-lg transition">
-                S'inscrire
-            </a>
+            {% if user.is_authenticated %}
+                <span class="text-sm text-gray-400">
+                    Bonjour, <span class="text-blue-400 font-medium">{{ user.username }}</span>
+                </span>
+                <form method="POST" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="text-sm text-gray-300 hover:text-red-400 transition">
+                        Déconnexion
+                    </button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="text-sm text-gray-300 hover:text-white transition">
+                    Connexion
+                </a>
+                <a href="{% url 'register' %}"
+                    class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-lg transition">
+                    S'inscrire
+                </a>
+            {% endif %}
         </div>
 
     </div>
