@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Carte — Marine Traffic{% endblock %}
+
+{% block content %}
+
+<div class="flex flex-col gap-4">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-white">🗺️ Carte maritime en temps réel</h1>
+        <span class="text-sm text-green-400 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"></span>
+            En direct
+        </span>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map" class="w-full rounded-2xl border border-gray-800 shadow-xl z-0"
+         style="height: 75vh;">
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Initialiser la carte centrée sur la Méditerranée
+    const map = L.map('map', {
+        center: [36.0, 14.0],
+        zoom: 5,
+        zoomControl: true,
+    });
+
+    // Tuiles OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18,
+    }).addTo(map);
+
+    // Exemple de navire (marker)
+    const shipIcon = L.divIcon({
+        html: '🚢',
+        className: '',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+    });
+
+    L.marker([36.8, 10.2], { icon: shipIcon })
+        .addTo(map)
+        .bindPopup(`
+            <div style="font-family:sans-serif; min-width:150px;">
+                <strong>MSC Tunis</strong><br>
+                🏴 Pavillon : Tunisie<br>
+                ⚓ Statut : En route<br>
+                🕐 Mis à jour : il y a 2 min
+            </div>
+        `);
+
+    L.marker([35.9, 14.5], { icon: shipIcon })
+        .addTo(map)
+        .bindPopup(`
+            <div style="font-family:sans-serif; min-width:150px;">
+                <strong>Atlantic Star</strong><br>
+                🏴 Pavillon : Malte<br>
+                ⚓ Statut : À quai<br>
+                🕐 Mis à jour : il y a 5 min
+            </div>
+        `);
+</script>
+{% endblock %}
