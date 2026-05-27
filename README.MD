@@ -1,539 +1,206 @@
-# 🚢 Suivi du trafic maritime en temps réel — Django + Kafka
+# 🚢 Marine Traffic — Suivi maritime en temps réel
 
-## 📌 Présentation du projet
-
-Cette application permet de suivre le trafic maritime en temps réel à partir d’une API de données AIS (Automatic Identification System).
-
-Le système collecte les positions des navires commerciaux en continu, diffuse les événements via Apache Kafka, puis traite les flux pour détecter les ralentissements, suivre des navires spécifiques et afficher les mouvements sur une carte interactive.
-
-Le projet est construit autour de :
-
-* Backend : Django + Django REST Framework
-* Streaming : Apache Kafka
-* Traitement temps réel : Kafka Consumers
-* Base de données : PostgreSQL + PostGIS
-* Frontend : Django Templates ou React (optionnel)
-* Cartographie : Leaflet.js / OpenStreetMap
-* Conteneurisation : Docker & Docker Compose
+> Plateforme de visualisation et d'analyse du trafic maritime mondial basée sur Django, Kafka et Leaflet.js.
 
 ---
 
-# 🎯 Objectifs du projet
+## 🏗️ Stack technique
 
-## Fonctionnalités principales
-
-### ✅ Collecte temps réel
-
-* Récupération des données AIS via une API externe
-* Synchronisation automatique toutes les minutes
-* Gestion des erreurs réseau et des quotas API
-
-### ✅ Streaming Kafka
-
-* Publication des positions des navires dans Kafka
-* Architecture orientée événements
-* Découplage entre ingestion et traitement
-
-### ✅ Analyse du trafic maritime
-
-* Détection des ralentissements
-* Détection des zones de congestion
-* Suivi d’un navire spécifique
-* Analyse régionale ou mondiale
-
-### ✅ Visualisation
-
-* Carte interactive en temps réel
-* Filtres :
-
-  * Nom du navire
-  * Type
-  * Pays
-  * Zone géographique
-* Affichage des trajectoires
-* Heatmap de densité maritime
+| Composant        | Technologie                        |
+|------------------|------------------------------------|
+| Backend          | Django 6 + Django REST Framework   |
+| Frontend         | Django Templates + Tailwind CSS v4 |
+| Cartographie     | Leaflet.js + OpenStreetMap         |
+| Base de données  | PostgreSQL                         |
+| Streaming        | Apache Kafka                       |
+| WebSocket        | Django Channels                    |
+| Scheduler        | Celery Beat                        |
+| Conteneurisation | Docker & Docker Compose            |
+| Monitoring       | Prometheus + Grafana               |
 
 ---
 
-# 🏗️ Architecture du projet
+## 📂 Structure du projet
 
-```text
-                    +-------------------+
-                    | API Maritime AIS |
-                    +---------+---------+
-                              |
-                              v
-                    +-------------------+
-                    | Django Producer   |
-                    | (Collecte API)    |
-                    +---------+---------+
-                              |
-                              v
-                    +-------------------+
-                    | Apache Kafka      |
-                    | Topic: ships      |
-                    +---------+---------+
-                              |
-             +----------------+----------------+
-             |                                 |
-             v                                 v
-+--------------------------+     +--------------------------+
-| Consumer Analyse         |     | Consumer Tracking        |
-| Congestion / anomalies   |     | Suivi temps réel         |
-+-------------+------------+     +-------------+------------+
-              |                                |
-              v                                v
-       +-------------+                 +---------------+
-       | PostgreSQL  |                 | WebSocket API |
-       | + PostGIS   |                 +-------+-------+
-       +------+------+                         |
-              |                                v
-              +----------------------> Frontend
-                                      (Carte live)
 ```
-
----
-
-# ⚙️ Stack technique
-
-| Composant             | Technologie           |
-| --------------------- | --------------------- |
-| Backend API           | Django                |
-| API REST              | Django REST Framework |
-| Streaming             | Apache Kafka          |
-| Broker Kafka          | Confluent / Bitnami   |
-| Base de données       | PostgreSQL            |
-| Données géographiques | PostGIS               |
-| Scheduler             | Celery Beat / Cron    |
-| WebSocket             | Django Channels       |
-| Cartographie          | Leaflet.js            |
-| Conteneurisation      | Docker                |
-| Monitoring            | Prometheus + Grafana  |
-
----
-
-# 📂 Structure du projet
-
-```text
-maritime-tracking/
-│
-├── backend/
-│   ├── config/
-│   ├── ships/
-│   ├── tracking/
-│   ├── analytics/
-│   ├── consumers/
-│   ├── producers/
-│   ├── websocket/
-│   └── manage.py
-│
-├── frontend/
-│   ├── templates/
-│   ├── static/
-│   └── map/
-│
-├── kafka/
-│   ├── producer.py
-│   ├── consumer.py
-│   └── topics/
-│
-├── docker/
-│
-├── docker-compose.yml
-│
+marine traffic/
+├── core/                  ← App principale (vues, modèles, URLs)
+├── marine_traffic/        ← Configuration Django (settings, urls, wsgi)
+├── theme/                 ← App Tailwind CSS
+│   └── templates/
+│       ├── base.html      ← Layout principal
+│       ├── components/    ← Navbar, footer, etc.
+│       └── core/          ← Pages de l'app
+├── venv/                  ← Environnement virtuel (non versionné)
+├── .env                   ← Variables d'environnement (non versionné)
+├── .gitignore
+├── manage.py
 ├── requirements.txt
-│
-└── README.md
+└── start.ps1              ← Script de lancement (Windows)
 ```
 
 ---
 
-# 🌍 API maritime utilisée
+## ⚡ Installation locale
 
-Plusieurs APIs peuvent être utilisées.
-
-## Option 1 — MarineTraffic
-
-👉 API professionnelle AIS.
-
-Fonctionnalités :
-
-* Position temps réel
-* Type des navires
-* Vitesse
-* Destination
-* Historique des trajets
-
-Documentation :
-
-* [https://servicedocs.marinetraffic.com/](https://servicedocs.marinetraffic.com/)
-
-## Option 2 — OpenAIS
-
-👉 Alternative open-source ou gratuite selon disponibilité.
-
-* [https://open-ais.org/](https://open-ais.org/)
-
----
-
-# 🔄 Pipeline temps réel
-
-## Étape 1 — Collecte des données
-
-Le producer Django interroge l’API toutes les minutes.
-
-Exemple de payload AIS :
-
-```json
-{
-  "mmsi": "235009271",
-  "ship_name": "EVER GIVEN",
-  "latitude": 48.8566,
-  "longitude": 2.3522,
-  "speed": 14.5,
-  "course": 120,
-  "country": "Panama",
-  "timestamp": "2026-05-27T10:00:00Z"
-}
-```
-
----
-
-## Étape 2 — Publication Kafka
-
-Les données sont publiées dans le topic :
-
-```text
-ships.positions
-```
-
-Exemple de producer Kafka :
-
-```python
-from kafka import KafkaProducer
-import json
-
-producer = KafkaProducer(
-    bootstrap_servers='kafka:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
-
-producer.send('ships.positions', payload)
-```
-
----
-
-## Étape 3 — Traitement temps réel
-
-Les consumers Kafka permettent de :
-
-### 🚨 Détection de congestion
-
-Détection automatique si plusieurs navires :
-
-* restent dans une même zone
-* avancent à vitesse réduite
-* provoquent un embouteillage maritime
-
-### 🚢 Suivi d’un navire
-
-Suivi par :
-
-* MMSI
-* Nom
-* IMO
-
-### 📊 Détection d’anomalies
-
-Exemples :
-
-* Arrêt inhabituel
-* Changement brutal de trajectoire
-* Sortie de route commerciale
-* Retard important
-
----
-
-# 🗺️ Visualisation cartographique
-
-## Carte interactive
-
-Utilisation de :
-
-* Leaflet.js
-* OpenStreetMap
-
-Fonctionnalités :
-
-* Affichage temps réel
-* Zoom régional / mondial
-* Clustering des navires
-* Heatmap de trafic
-* Trajectoires dynamiques
-
----
-
-# 🔌 WebSocket temps réel
-
-Les mises à jour sont poussées au frontend avec Django Channels.
-
-Exemple :
-
-```python
-class ShipConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        await self.accept()
-
-    async def ship_update(self, event):
-        await self.send(text_data=json.dumps(event))
-```
-
----
-
-# 🐳 Déploiement Docker
-
-## Lancer le projet
+### 1. Cloner le projet
 
 ```bash
-docker-compose up --build
+git clone https://github.com/votre-org/marine-traffic.git
+cd marine-traffic
 ```
 
----
+### 2. Créer et activer l'environnement virtuel
 
-# 📦 Services Docker
-
-| Service    | Port |
-| ---------- | ---- |
-| Django     | 8000 |
-| PostgreSQL | 5432 |
-| Kafka      | 9092 |
-| Zookeeper  | 2181 |
-| Grafana    | 3000 |
-| Prometheus | 9090 |
-
----
-
-# 🧠 Détection de congestion
-
-## Exemple de logique métier
-
-Un ralentissement est détecté si :
-
-```text
-- plus de 10 navires
-- dans un rayon de 5 km
-- vitesse moyenne < 3 noeuds
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 ```
 
----
+### 3. Installer les dépendances Python
 
-# 📊 Monitoring
-
-Le système peut intégrer :
-
-## Prometheus
-
-Collecte des métriques :
-
-* nombre de navires
-* latence Kafka
-* erreurs API
-* fréquence des événements
-
-## Grafana
-
-Dashboards :
-
-* trafic mondial
-* densité maritime
-* alertes congestion
-* activité par zone
-
----
-
-# 🔐 Sécurité
-
-## Recommandations
-
-* Variables d’environnement (.env)
-* Rotation des clés API
-* Auth JWT
-* Rate limiting
-* HTTPS
-* Validation des données AIS
-
----
-
-# 🚀 Installation locale
-
-## 1. Cloner le projet
-
-```bash
-git clone https://github.com/votre-org/maritime-tracking.git
-cd maritime-tracking
-```
-
----
-
-## 2. Créer le fichier .env
-
-```env
-DEBUG=True
-SECRET_KEY=your_secret_key
-POSTGRES_DB=maritime
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-MARINE_API_KEY=your_api_key
-```
-
----
-
-## 3. Installer les dépendances
-
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
----
+### 4. Créer le fichier `.env`
 
-## 4. Lancer les migrations
+Copier le fichier d'exemple et remplir les valeurs :
 
-```bash
+```powershell
+copy .env.example .env
+```
+
+Contenu minimal du `.env` :
+
+```env
+SECRET_KEY=django-insecure-change-me-in-production
+DEBUG=True
+
+DB_NAME=marine_traffic
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+### 5. Créer la base de données PostgreSQL
+
+```powershell
+psql -U postgres -c "CREATE DATABASE marine_traffic;"
+```
+
+### 6. Installer Tailwind CSS
+
+```powershell
+python manage.py tailwind install
+```
+
+### 7. Appliquer les migrations
+
+```powershell
 python manage.py migrate
 ```
 
+### 8. Créer un superutilisateur
+
+```powershell
+python manage.py createsuperuser
+```
+
+### 9. Lancer le projet
+
+```powershell
+.\start.ps1
+```
+
+> Ce script ouvre automatiquement deux terminaux :
+> - 🎨 **Tailwind** en mode watch (live reload CSS)
+> - 🌐 **Django** sur http://127.0.0.1:8000
+
 ---
 
-## 5. Lancer le serveur
+## 🌐 URLs disponibles
 
-```bash
-python manage.py runserver
+| URL            | Description              |
+|----------------|--------------------------|
+| `/`            | Page d'accueil           |
+| `/map/`        | Carte maritime Leaflet   |
+| `/admin/`      | Interface d'administration |
+| `/__reload__/` | Live reload (dev)        |
+
+---
+
+## 📦 Générer le fichier requirements.txt
+
+```powershell
+pip freeze > requirements.txt
 ```
 
 ---
 
-# 📜 Exemple requirements.txt
+## 🧪 Lancer les tests
 
-```txt
-Django
- djangorestframework
-psycopg2-binary
-kafka-python
-channels
-channels-redis
-celery
-redis
-requests
-geopy
-shapely
-python-dotenv
+```powershell
+python manage.py test
 ```
 
 ---
 
-# 🧪 Tests
+## 🏗️ Architecture temps réel (cible)
 
-## Lancer les tests
-
-```bash
-pytest
+```
+  API AIS externe
+       │
+       ▼
+  Django Producer
+  (collecte toutes les minutes)
+       │
+       ▼
+  Apache Kafka
+  Topic: ships.positions
+       │
+  ┌────┴────┐
+  ▼         ▼
+Consumer   Consumer
+Analyse    Tracking
+Congestion Temps réel
+  │              │
+  ▼              ▼
+PostgreSQL   WebSocket
+             (Django Channels)
+                  │
+                  ▼
+            Frontend
+            (Carte Leaflet live)
 ```
 
 ---
 
-# 📈 Évolutions possibles
+## 👨‍💻 Équipe projet
 
-## Intelligence artificielle
-
-* Prévision des retards
-* Détection comportementale
-* Prévision de congestion
-* Classification des anomalies
-
-## Big Data
-
-* Apache Spark Streaming
-* Flink
-* Data Lake
-
-## Notifications
-
-* Alertes Slack
-* Email
-* SMS
-* Discord
+| Rôle              | Mission                          |
+|-------------------|----------------------------------|
+| Backend Engineer  | APIs Django + modèles            |
+| Data Engineer     | Kafka + pipeline streaming       |
+| DevOps            | Docker + monitoring              |
+| Frontend Engineer | Templates + Tailwind + Leaflet   |
+| Data Analyst      | Analyse et détection d'anomalies |
 
 ---
 
-# 👨‍💻 Équipe projet
+## 📚 Ressources
 
-| Rôle              | Mission                 |
-| ----------------- | ----------------------- |
-| Backend Engineer  | APIs Django             |
-| Data Engineer     | Kafka + Streaming       |
-| DevOps            | Docker + Monitoring     |
-| Frontend Engineer | Cartographie temps réel |
-| Data Analyst      | Analyse maritime        |
-
----
-
-# 📚 Ressources utiles
-
-## Kafka
-
-* [https://kafka.apache.org/](https://kafka.apache.org/)
-
-## Django
-
-* [https://www.djangoproject.com/](https://www.djangoproject.com/)
-
-## Django Channels
-
-* [https://channels.readthedocs.io/](https://channels.readthedocs.io/)
-
-## Leaflet
-
-* [https://leafletjs.com/](https://leafletjs.com/)
-
-## PostGIS
-
-* [https://postgis.net/](https://postgis.net/)
+- [Django](https://www.djangoproject.com/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [Leaflet.js](https://leafletjs.com/)
+- [OpenStreetMap](https://www.openstreetmap.org/)
+- [Apache Kafka](https://kafka.apache.org/)
+- [Django Channels](https://channels.readthedocs.io/)
+- [MarineTraffic API](https://servicedocs.marinetraffic.com/)
 
 ---
 
-# ✅ Résultat attendu
-
-L’application permettra :
-
-* d’observer le trafic maritime mondial en direct
-* de détecter automatiquement les congestions
-* de suivre des navires spécifiques
-* d’analyser les flux maritimes
-* d’avoir une plateforme scalable temps réel basée sur Kafka
-
----
-
-# 🛳️ Exemple de cas d’usage
-
-## Cas réel
-
-Un port européen souhaite :
-
-* anticiper les retards
-* surveiller l’arrivée des cargos
-* détecter les bouchons maritimes
-* optimiser les opérations logistiques
-
-Le système fournit alors :
-
-* une carte live
-* des alertes congestion
-* un suivi des navires critiques
-* des statistiques temps réel
-
----
-
-# 📄 Licence
+## 📄 Licence
 
 MIT License

@@ -1,0 +1,87 @@
+# ──────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.eggs/
+
+# ──────────────────────────────────────────
+# Environnement virtuel
+# ──────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env.local
+.env.production
+
+# ──────────────────────────────────────────
+# Variables d'environnement (SENSIBLE)
+# ──────────────────────────────────────────
+.env
+
+# ──────────────────────────────────────────
+# Django
+# ──────────────────────────────────────────
+*.log
+*.pot
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static_collected/
+
+# ──────────────────────────────────────────
+# Tailwind / Node
+# ──────────────────────────────────────────
+node_modules/
+theme/static_src/node_modules/
+theme/static/css/dist/
+
+# Binaire Tailwind téléchargé
+theme/static_src/tailwindcss*
+*.exe
+
+# ──────────────────────────────────────────
+# IDE & Éditeurs
+# ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────
+# Tests & Coverage
+# ──────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+coverage.xml
+*.cover
+
+# ──────────────────────────────────────────
+# Divers
+# ──────────────────────────────────────────
+*.bak
+*.tmp
+*.orig
