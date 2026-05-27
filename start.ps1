@@ -14,11 +14,13 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", `
 # Petit délai pour laisser Tailwind démarrer
 Start-Sleep -Seconds 2
 
-# Lancer Django dans un terminal séparé
+# Lancer Django dans un terminal séparé (import des ports au démarrage si table vide)
 Write-Host "Démarrage du serveur Django..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit", "-Command", `
     "cd '$projectPath'; `
     .\venv\Scripts\Activate.ps1; `
+    Write-Host 'Import des ports...' -ForegroundColor Yellow; `
+    python manage.py load_ports --if-empty; `
     Write-Host 'Django Server' -ForegroundColor Green; `
     python manage.py runserver"
 

@@ -126,6 +126,8 @@ python manage.py createsuperuser
 |----------------|--------------------------|
 | `/`            | Page d'accueil           |
 | `/map/`        | Carte maritime Leaflet   |
+| `/ports/`      | Liste des ports mondiaux (filtres, pagination) |
+| `/api/ports/`  | API JSON — données de tous les ports |
 | `/admin/`      | Interface d'administration |
 | `/__reload__/` | Live reload (dev)        |
 

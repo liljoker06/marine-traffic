@@ -7,11 +7,30 @@
 <div class="flex flex-col gap-4">
 
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
         <h1 class="text-2xl font-bold text-white">🗺️ Carte maritime en temps réel</h1>
-        <span class="text-sm text-green-400 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"></span>
-            En direct
+        <div class="flex items-center gap-4">
+            <!-- on/off ports -->
+            <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300">
+                <input type="checkbox" id="togglePorts" checked class="accent-yellow-400 w-4 h-4" />
+                <span>⚓ Ports</span>
+            </label>
+            <span class="text-sm text-green-400 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"></span>
+                En direct
+            </span>
+        </div>
+    </div>
+
+    <!-- légende -->
+    <div class="flex items-center gap-6 text-xs text-gray-400">
+        <span class="flex items-center gap-1">
+            <span class="text-base">🚢</span> 
+            Navire
+        </span>
+        <span class="flex items-center gap-2">
+            <span class="">⚓</span>
+            Port
         </span>
     </div>
 
@@ -30,12 +49,23 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Axios -->
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
+<!-- icone font-awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <script>
-    // Initialiser la carte centrée sur la Méditerranée
+(function () {
+    // --- Paramètres depuis l'URL (lien depuis la page /ports/) ---
+    const params = new URLSearchParams(window.location.search);
+    const initLat = parseFloat(params.get('lat')) || 36.0;
+    const initLng = parseFloat(params.get('lng')) || 14.0;
+    const initZoom = parseInt(params.get('zoom')) || 5;
+
+    // --- Initialisation de la carte ---
     const map = L.map('map', {
-        center: [36.0, 14.0],
-        zoom: 5,
+        center: [initLat, initLng],
+        zoom: initZoom,
         zoomControl: true,
     });
 
@@ -74,5 +104,62 @@
                 🕐 Mis à jour : il y a 5 min
             </div>
         `);
+
+    // tout les ports
+    const portsLayer = L.layerGroup().addTo(map);
+    let portsLoaded = false;
+
+    function loadPorts() {
+        if (portsLoaded) return;
+        portsLoaded = true;
+
+        axios.get('/api/ports/')
+            .then(response => {
+                response.data.ports.forEach(port => {
+                    const marker = L.marker([port.latitude, port.longitude], {
+                        icon: L.divIcon({
+                            className: 'emoji-marker',
+                            html: `<div style="
+                                background: white;
+                                border-radius: 50%;
+                                width: 14px;
+                                height: 14px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                                font-size: 12px;
+                            ">⚓</div>`,
+                            iconSize: [14, 14],
+                            iconAnchor: [10, 10],
+                        })
+                    });
+
+                    marker.bindPopup(`
+                        <div style="font-family:sans-serif; min-width:160px;">
+                            <strong><i class="fa-solid fa-anchor"></i> ${port.name}</strong><br>
+                            <i class="fa-solid fa-flag"></i> Pays : <strong>${port.country || '—'}</strong><br>
+                            <i class="fa-solid fa-globe"></i> Région : ${port.region || '—'}<br>
+                            <i class="fa-solid fa-location-dot"></i> ${port.latitude.toFixed(4)}, ${port.longitude.toFixed(4)}
+                        </div>
+                    `);
+
+                    portsLayer.addLayer(marker);
+                });
+            })
+            .catch(err => console.error('Erreur chargement ports :', err.message));
+    }
+    loadPorts();
+
+    document.getElementById('togglePorts').addEventListener('change', function () {
+        if (this.checked) {
+            map.addLayer(portsLayer);
+            loadPorts();
+        } else {
+            map.removeLayer(portsLayer);
+        }
+    });
+
+})();
 </script>
 {% endblock %}
