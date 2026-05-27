@@ -1,19 +1,70 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
-from .forms import RegisterForm, LoginForm, UserEditForm
 
+from .forms import RegisterForm, LoginForm, UserEditForm
+from .models import Port
+
+# ======================================================
+# HOME + MAP
 
 def index(request):
     return render(request, 'core/index.html')
 
-
 @login_required
 def map_view(request):
-    return render(request, 'core/map.html')
+    return render(request, "core/map.html")
 
+
+# ======================================================
+# PORTS (LISTE + API)
+
+def ports_list(request):
+    qs = Port.objects.all()
+
+    search = request.GET.get("search", "").strip()
+    country = request.GET.get("country", "").strip()
+
+    if search:
+        qs = qs.filter(name__icontains=search)
+    if country:
+        qs = qs.filter(country__iexact=country)
+
+    countries = (
+        Port.objects.values_list("country", flat=True)
+        .distinct()
+        .order_by("country")
+    )
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "core/ports.html",
+        {
+            "page_obj": page_obj,
+            "countries": countries,
+            "search": search,
+            "selected_country": country,
+            "total": Port.objects.count(),
+        },
+    )
+
+
+def ports_api(request):
+    ports = list(
+        Port.objects.values("id", "name", "country", "region", "latitude", "longitude")
+    )
+    return JsonResponse({"ports": ports})
+
+
+# ======================================================
+# AUTH
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -62,6 +113,9 @@ def logout_view(request):
     return redirect('index')
 
 
+# ======================================================
+# PAGES SIMPLES
+
 def about_view(request):
     return render(request, 'core/about.html')
 
@@ -69,6 +123,9 @@ def about_view(request):
 def faq_view(request):
     return render(request, 'core/faq.html')
 
+
+# ======================================================
+# PROFIL
 
 @login_required
 def profile_view(request):
