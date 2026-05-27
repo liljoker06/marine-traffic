@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Ports — Marine Traffic{% endblock %}
+
+{% block content %}
+
+<div class="flex flex-col gap-6">
+
+    <!-- micro entête -->
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white">⚓ Ports mondiaux</h1>
+            <p class="text-gray-400 text-sm mt-1">{{ total }} ports référencés par NGA World Port Index</p>
+        </div>
+
+    </div>
+
+    <!-- filtres -->
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+        <div class="flex flex-col gap-1">
+            <label class="text-gray-400 text-xs uppercase tracking-wide">Recherche</label>
+            <input
+                type="text"
+                name="search"
+                value="{{ search }}"
+                placeholder="Nom du port…"
+                class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 w-56"
+            />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-gray-400 text-xs uppercase tracking-wide">Pays</label>
+            <select
+                name="country"
+                class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 w-40"
+            >
+                <option value="">Tous les pays</option>
+                {% for c in countries %}
+                    <option value="{{ c }}" {% if c == selected_country %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-lg transition"
+        >
+            Filtrer
+        </button>
+        {% if search or selected_country %}
+        <a href="/ports/" class="text-gray-400 hover:text-white text-sm py-2 transition">
+            Réinitialiser
+        </a>
+        {% endif %}
+    </form>
+
+    <!-- résult -->
+    <p class="text-gray-400 text-sm">
+        {{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize }}
+        — page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+    </p>
+
+    <!-- table -->
+    <div class="overflow-x-auto rounded-xl border border-gray-800">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-900 text-gray-400 uppercase text-xs tracking-wide">
+                <tr>
+                    <th class="px-4 py-3">Port</th>
+                    <th class="px-4 py-3">Pays</th>
+                    <th class="px-4 py-3">Région</th>
+                    <th class="px-4 py-3">Latitude</th>
+                    <th class="px-4 py-3">Longitude</th>
+                    <th class="px-4 py-3 text-center">Carte</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for port in page_obj %}
+                <tr class="bg-gray-950 hover:bg-gray-900 transition">
+                    <td class="px-4 py-3 font-medium text-white">{{ port.name }}</td>
+                    <td class="px-4 py-3 text-gray-300">{{ port.country }}</td>
+                    <td class="px-4 py-3 text-gray-400">{{ port.region }}</td>
+                    <td class="px-4 py-3 text-gray-400 font-mono">{{ port.latitude|floatformat:4 }}</td>
+                    <td class="px-4 py-3 text-gray-400 font-mono">{{ port.longitude|floatformat:4 }}</td>
+                    <td class="px-4 py-3 text-center">
+                        <a
+                            href="/map/?lat={{ port.latitude }}&lng={{ port.longitude }}&zoom=10"
+                            class="text-blue-400 hover:text-blue-300 transition text-xs"
+                            title="Voir sur la carte"
+                        >⚓</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        Aucun port trouvé.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-center gap-2 flex-wrap">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}&country={{ selected_country }}"
+           class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition">
+            ← Précédent
+        </a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="px-3 py-1 rounded-lg bg-blue-600 text-white text-sm">{{ num }}</span>
+            {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+            <a href="?page={{ num }}&search={{ search }}&country={{ selected_country }}"
+               class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition">
+                {{ num }}
+            </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&search={{ search }}&country={{ selected_country }}"
+           class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition">
+            Suivant →
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}
