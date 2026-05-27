@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import RegisterForm, LoginForm
+from django.contrib.auth.models import User
+from .forms import RegisterForm, LoginForm, UserEditForm
 
 
 def index(request):
@@ -34,18 +35,22 @@ def login_view(request):
 
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        user = authenticate(
-            request,
-            username=form.cleaned_data['username'],
-            password=form.cleaned_data['password'],
-        )
+        email = form.cleaned_data['email']
+        password = form.cleaned_data['password']
+        try:
+            username = User.objects.get(email=email).username
+        except User.DoesNotExist:
+            username = None
+
+        user = authenticate(request, username=username, password=password) if username else None
+
         if user:
             login(request, user)
             messages.success(request, f'Bon retour, {user.username} !')
             next_url = request.GET.get('next', 'index')
             return redirect(next_url)
         else:
-            messages.error(request, 'Identifiants incorrects. Veuillez réessayer.')
+            messages.error(request, 'Email ou mot de passe incorrect.')
 
     return render(request, 'core/login.html', {'form': form})
 
@@ -55,3 +60,35 @@ def logout_view(request):
         logout(request)
         messages.info(request, 'Vous avez été déconnecté.')
     return redirect('index')
+
+
+def about_view(request):
+    return render(request, 'core/about.html')
+
+
+def faq_view(request):
+    return render(request, 'core/faq.html')
+
+
+@login_required
+def profile_view(request):
+    edit_form = UserEditForm(instance=request.user)
+    return render(request, 'core/profile.html', {
+        'edit_form': edit_form,
+        'show_edit_modal': False,
+    })
+
+
+@login_required
+def edit_profile_view(request):
+    form = UserEditForm(request.POST or None, instance=request.user)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Votre profil a été mis à jour.')
+        return redirect('profile')
+
+    return render(request, 'core/profile.html', {
+        'edit_form': form,
+        'show_edit_modal': True,
+    })

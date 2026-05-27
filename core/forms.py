@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
+
 INPUT_CLASS = (
     'w-full bg-gray-800 border border-gray-700 text-white rounded-lg '
     'px-4 py-3 focus:outline-none focus:border-blue-500 placeholder-gray-500'
@@ -43,10 +44,10 @@ class RegisterForm(UserCreationForm):
 
 
 class LoginForm(forms.Form):
-    username = forms.CharField(
-        widget=forms.TextInput(attrs={
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
             'class': INPUT_CLASS,
-            'placeholder': "Nom d'utilisateur",
+            'placeholder': 'votre@email.com',
         })
     )
     password = forms.CharField(
@@ -55,3 +56,22 @@ class LoginForm(forms.Form):
             'placeholder': 'Mot de passe',
         })
     )
+
+
+class UserEditForm(forms.ModelForm):
+    first_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Prénom'}),
+    )
+    last_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Nom'}),
+    )
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'class': INPUT_CLASS, 'placeholder': 'votre@email.com'}),
+    )
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')

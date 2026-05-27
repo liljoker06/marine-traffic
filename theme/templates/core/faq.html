@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}FAQ — Marine Traffic{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<section class="text-center py-14">
+    <h1 class="text-4xl font-bold text-white mb-4">
+        Foire aux <span class="text-blue-400">questions</span>
+    </h1>
+    <p class="text-gray-400 text-lg max-w-xl mx-auto">
+        Retrouvez les réponses aux questions les plus fréquentes sur Marine Traffic.
+    </p>
+</section>
+
+<!-- Questions -->
+<section class="max-w-3xl mx-auto mb-16 flex flex-col gap-4">
+
+    <details class="bg-gray-900 border border-gray-800 rounded-2xl p-6 group">
+        <summary class="flex justify-between items-center cursor-pointer text-white font-medium text-lg list-none">
+            Qu'est-ce que Marine Traffic ?
+            <span class="text-blue-400 text-2xl group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <p class="text-gray-400 mt-4 leading-relaxed">
+            Marine Traffic est une plateforme de suivi du trafic maritime en temps réel.
+            Elle permet de visualiser la position des navires dans le monde entier grâce
+            aux données AIS (Automatic Identification System).
+        </p>
+    </details>
+
+    <details class="bg-gray-900 border border-gray-800 rounded-2xl p-6 group">
+        <summary class="flex justify-between items-center cursor-pointer text-white font-medium text-lg list-none">
+            Comment les données sont-elles collectées ?
+            <span class="text-blue-400 text-2xl group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <p class="text-gray-400 mt-4 leading-relaxed">
+            Les données proviennent du système AIS, obligatoire à bord des navires commerciaux
+            de plus de 300 tonnes. Les navires émettent en continu leur position, leur vitesse
+            et leur cap, que nous captons via un réseau de stations réceptrices et de satellites.
+        </p>
+    </details>
+
+    <details class="bg-gray-900 border border-gray-800 rounded-2xl p-6 group">
+        <summary class="flex justify-between items-center cursor-pointer text-white font-medium text-lg list-none">
+            L'accès à la carte est-il gratuit ?
+            <span class="text-blue-400 text-2xl group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <p class="text-gray-400 mt-4 leading-relaxed">
+            Oui, la carte interactive est accessible gratuitement après inscription.
+            Un compte vous donne accès aux positions en temps réel et à l'historique
+            de base des navires.
+        </p>
+    </details>
+
+    <details class="bg-gray-900 border border-gray-800 rounded-2xl p-6 group">
+        <summary class="flex justify-between items-center cursor-pointer text-white font-medium text-lg list-none">
+            Puis-je suivre un navire spécifique ?
+            <span class="text-blue-400 text-2xl group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <p class="text-gray-400 mt-4 leading-relaxed">
+            Oui. En étant connecté, vous pouvez rechercher un navire par son nom, son numéro MMSI
+            ou son indicatif d'appel, et suivre sa trajectoire en temps réel.
+        </p>
+    </details>
+
+    <details class="bg-gray-900 border border-gray-800 rounded-2xl p-6 group">
+        <summary class="flex justify-between items-center cursor-pointer text-white font-medium text-lg list-none">
+            Les données sont-elles mises à jour en temps réel ?
+            <span class="text-blue-400 text-2xl group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <p class="text-gray-400 mt-4 leading-relaxed">
+            Oui, les positions sont rafraîchies toutes les quelques secondes à quelques minutes
+            selon la couverture réseau disponible dans la zone concernée.
+        </p>
+    </details>
+
+    <details class="bg-gray-900 border border-gray-800 rounded-2xl p-6 group">
+        <summary class="flex justify-between items-center cursor-pointer text-white font-medium text-lg list-none">
+            Comment signaler un problème ou contacter le support ?
+            <span class="text-blue-400 text-2xl group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <p class="text-gray-400 mt-4 leading-relaxed">
+            Vous pouvez nous contacter par email à
+            <a href="mailto:contact@marinetraffic.example.com" class="text-blue-400 hover:underline">
+                contact@marinetraffic.example.com
+            </a>.
+            Notre équipe répond généralement sous 24 à 48 heures ouvrées.
+        </p>
+    </details>
+
+</section>
+
+<!-- CTA -->
+<section class="text-center py-6 mb-8">
+    <p class="text-gray-400 mb-4">Vous n'avez pas trouvé votre réponse ?</p>
+    <a href="mailto:contact@marinetraffic.example.com"
+       class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold transition">
+        Contactez-nous
+    </a>
+</section>
+
+{% endblock %}
