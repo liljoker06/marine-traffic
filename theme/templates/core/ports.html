@@ -39,13 +39,33 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-gray-400 text-xs uppercase tracking-wide">Taille</label>
+            <select
+                name="harbor_size"
+                class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 w-40"
+            >
+                <option value="">Toutes les tailles</option>
+                {% for size in harbor_sizes %}
+                    {% if size == "L" %}
+                        <option value="{{ size }}" {% if size == selected_harbor_size %}selected{% endif %}>Large</option>
+                    {% elif size == "M" %}
+                        <option value="{{ size }}" {% if size == selected_harbor_size %}selected{% endif %}>Medium</option>
+                    {% elif size == "S" %}
+                        <option value="{{ size }}" {% if size == selected_harbor_size %}selected{% endif %}>Small</option>
+                    {% elif size == "V" %}
+                        <option value="{{ size }}" {% if size == selected_harbor_size %}selected{% endif %}>Very Small</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
         <button
             type="submit"
             class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-lg transition"
         >
             Filtrer
         </button>
-        {% if search or selected_country %}
+        {% if search or selected_country or selected_harbor_size %}
         <a href="/ports/" class="text-gray-400 hover:text-white text-sm py-2 transition">
             Réinitialiser
         </a>
@@ -63,6 +83,7 @@
         <table class="w-full text-sm text-left">
             <thead class="bg-gray-900 text-gray-400 uppercase text-xs tracking-wide">
                 <tr>
+                    <th class="px-4 py-3">Taille</th>
                     <th class="px-4 py-3">Port</th>
                     <th class="px-4 py-3">Pays</th>
                     <th class="px-4 py-3">Région</th>
@@ -74,6 +95,17 @@
             <tbody class="divide-y divide-gray-800">
                 {% for port in page_obj %}
                 <tr class="bg-gray-950 hover:bg-gray-900 transition">
+                    <td class="px-4 py-3">
+                        {% if port.harbor_size == "L" %}
+                            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-600"></span>
+                        {% elif port.harbor_size == "M" %}
+                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-400 border border-orange-600"></span>
+                        {% elif port.harbor_size == "S" or port.harbor_size == "V" %}
+                            <span class="inline-block w-2 h-2 rounded-full bg-blue-400 border border-blue-600"></span>
+                        {% else %}
+                            <span class="text-gray-600">?</span>
+                        {% endif %}
+                    </td>
                     <td class="px-4 py-3 font-medium text-white">{{ port.name }}</td>
                     <td class="px-4 py-3 text-gray-300">{{ port.country }}</td>
                     <td class="px-4 py-3 text-gray-400">{{ port.region }}</td>
@@ -102,7 +134,7 @@
     {% if page_obj.has_other_pages %}
     <div class="flex items-center justify-center gap-2 flex-wrap">
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}&country={{ selected_country }}"
+        <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}&country={{ selected_country }}&harbor_size={{ selected_harbor_size }}"
            class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition">
             ← Précédent
         </a>
@@ -112,7 +144,7 @@
             {% if page_obj.number == num %}
             <span class="px-3 py-1 rounded-lg bg-blue-600 text-white text-sm">{{ num }}</span>
             {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
-            <a href="?page={{ num }}&search={{ search }}&country={{ selected_country }}"
+            <a href="?page={{ num }}&search={{ search }}&country={{ selected_country }}&harbor_size={{ selected_harbor_size }}"
                class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition">
                 {{ num }}
             </a>
@@ -120,7 +152,7 @@
         {% endfor %}
 
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}&search={{ search }}&country={{ selected_country }}"
+        <a href="?page={{ page_obj.next_page_number }}&search={{ search }}&country={{ selected_country }}&harbor_size={{ selected_harbor_size }}"
            class="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition">
             Suivant →
         </a>
