@@ -4,91 +4,178 @@
 
 {% block content %}
 
-<!-- En-tête -->
-<section class="text-center py-14">
-    <h1 class="text-4xl font-bold text-white mb-4">
-        À propos de <span class="text-blue-400">Marine Traffic</span>
-    </h1>
-    <p class="text-gray-400 text-lg max-w-2xl mx-auto">
-        Une plateforme de suivi du trafic maritime en temps réel, conçue pour les professionnels et les passionnés de la mer.
-    </p>
-</section>
-
-<!-- Mission -->
-<section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-        <h2 class="text-2xl font-semibold text-blue-400 mb-4">Notre mission</h2>
-        <p class="text-gray-300 leading-relaxed">
-            Marine Traffic a pour objectif de rendre le suivi maritime accessible à tous.
-            Grâce à notre plateforme, vous pouvez visualiser en temps réel la position
-            des navires commerciaux, des ferries et des bateaux de plaisance à travers le monde.
-        </p>
-    </div>
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-        <h2 class="text-2xl font-semibold text-blue-400 mb-4">Notre technologie</h2>
-        <p class="text-gray-300 leading-relaxed">
-            Nous exploitons les données AIS (Automatic Identification System) transmises
-            par les navires pour vous offrir une vue précise et actualisée du trafic maritime
-            mondial, avec une couverture dans plus de 180 pays.
+<!-- Hero -->
+<section class="py-16 border-b border-gray-800">
+    <div class="max-w-4xl mx-auto">
+        <p class="text-blue-400 text-sm font-semibold uppercase tracking-widest mb-3">À propos de nous</p>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-6">
+            Suivre les mers du monde,<br>
+            <span class="text-blue-400">simplement.</span>
+        </h1>
+        <p class="text-gray-400 text-lg max-w-2xl leading-relaxed">
+            Marine Traffic est un projet étudiant conçu pour rendre la visualisation
+            du trafic maritime accessible, claire et intuitive — pour les passionnés
+            comme pour les professionnels.
         </p>
     </div>
 </section>
 
-<!-- Chiffres clés -->
-<section class="mb-12">
-    <h2 class="text-2xl font-semibold text-white text-center mb-8">En chiffres</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-            <p class="text-4xl font-bold text-blue-400">180+</p>
-            <p class="text-gray-400 mt-2">Pays couverts</p>
+<!-- Stats -->
+<section class="py-12 border-b border-gray-800">
+    <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div>
+            <p class="text-4xl font-extrabold text-white">8 000+</p>
+            <p class="text-gray-500 text-sm mt-1">Ports référencés</p>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-            <p class="text-4xl font-bold text-blue-400">50 000+</p>
-            <p class="text-gray-400 mt-2">Navires suivis</p>
+        <div>
+            <p class="text-4xl font-extrabold text-white">150+</p>
+            <p class="text-gray-500 text-sm mt-1">Pays couverts</p>
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-            <p class="text-4xl font-bold text-blue-400">24/7</p>
-            <p class="text-gray-400 mt-2">Données en temps réel</p>
+        <div>
+            <p class="text-4xl font-extrabold text-white">3</p>
+            <p class="text-gray-500 text-sm mt-1">Développeurs</p>
+        </div>
+        <div>
+            <p class="text-4xl font-extrabold text-white">1</p>
+            <p class="text-gray-500 text-sm mt-1">Projet passionné</p>
+        </div>
+    </div>
+</section>
+
+<!-- Notre mission -->
+<section class="py-14 border-b border-gray-800">
+    <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div>
+            <p class="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Notre mission</p>
+            <h2 class="text-2xl font-bold text-white mb-4">Rendre le maritime visible pour tous</h2>
+            <p class="text-gray-400 leading-relaxed">
+                Le trafic maritime représente plus de 80 % du commerce mondial,
+                pourtant il reste largement invisible pour le grand public.
+                Notre objectif est de changer ça, en proposant une interface
+                simple et ouverte pour explorer les ports, les routes et les navires
+                à travers le monde.
+            </p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <div class="flex items-start gap-4 bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <div class="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-white font-medium text-sm">Carte interactive</p>
+                    <p class="text-gray-500 text-xs mt-0.5">Explorez les ports et routes mondiales en temps réel</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-4 bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <div class="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-white font-medium text-sm">Données réelles</p>
+                    <p class="text-gray-500 text-xs mt-0.5">Des milliers de ports issus de bases de données publiques</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-4 bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <div class="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-white font-medium text-sm">Espace personnel</p>
+                    <p class="text-gray-500 text-xs mt-0.5">Créez un compte pour accéder à toutes les fonctionnalités</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stack -->
+<section class="py-14 border-b border-gray-800">
+    <div class="max-w-4xl mx-auto">
+        <p class="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Technologies</p>
+        <h2 class="text-2xl font-bold text-white mb-8">Construit avec des outils modernes</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <p class="text-white font-semibold">Django</p>
+                <p class="text-gray-500 text-xs mt-1">Framework backend Python</p>
+            </div>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <p class="text-white font-semibold">PostgreSQL</p>
+                <p class="text-gray-500 text-xs mt-1">Base de données relationnelle</p>
+            </div>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <p class="text-white font-semibold">Tailwind CSS</p>
+                <p class="text-gray-500 text-xs mt-1">Design & composants UI</p>
+            </div>
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                <p class="text-white font-semibold">Leaflet.js</p>
+                <p class="text-gray-500 text-xs mt-1">Cartographie interactive</p>
+            </div>
         </div>
     </div>
 </section>
 
 <!-- Équipe -->
-<section class="bg-gray-900 border border-gray-800 rounded-2xl p-8 mb-12">
-    <h2 class="text-2xl font-semibold text-blue-400 mb-6 text-center">L'équipe</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-        <div>
-            <div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
-                👨‍💻
+<section class="py-14 border-b border-gray-800">
+    <div class="max-w-4xl mx-auto">
+        <p class="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">L'équipe</p>
+        <h2 class="text-2xl font-bold text-white mb-8">Trois étudiants, un projet</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-lg font-bold text-white mb-4">
+                    A
+                </div>
+                <p class="text-white font-semibold">Ahmad</p>
+                <p class="text-blue-400 text-xs font-medium mt-0.5 mb-3">Backend</p>
+                <p class="text-gray-500 text-sm leading-relaxed">
+                    Gestion du serveur, base de données, authentification et API.
+                </p>
             </div>
-            <p class="text-white font-medium">Ahmad</p>
-            <p class="text-gray-400 text-sm">Développeur principal</p>
-        </div>
-        <div>
-            <div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
-                🗺️
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-lg font-bold text-white mb-4">
+                    B
+                </div>
+                <p class="text-white font-semibold">Batyste</p>
+                <p class="text-indigo-400 text-xs font-medium mt-0.5 mb-3">Frontend</p>
+                <p class="text-gray-500 text-sm leading-relaxed">
+                    Interface utilisateur, design des pages et expérience client.
+                </p>
             </div>
-            <p class="text-white font-medium">Équipe Données</p>
-            <p class="text-gray-400 text-sm">Analyse AIS & cartographie</p>
-        </div>
-        <div>
-            <div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
-                🛠️
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-lg font-bold text-white mb-4">
+                    A
+                </div>
+                <p class="text-white font-semibold">Aladin</p>
+                <p class="text-purple-400 text-xs font-medium mt-0.5 mb-3">Backend & Frontend</p>
+                <p class="text-gray-500 text-sm leading-relaxed">
+                    Carte interactive, intégration des données et liaison front/back.
+                </p>
             </div>
-            <p class="text-white font-medium">Équipe Infra</p>
-            <p class="text-gray-400 text-sm">Infrastructure & performance</p>
+
         </div>
     </div>
 </section>
 
-<!-- Contact -->
-<section class="text-center py-8">
-    <h2 class="text-xl font-semibold text-white mb-4">Nous contacter</h2>
-    <p class="text-gray-400 mb-6">Une question, un partenariat ou un retour ? Écrivez-nous.</p>
-    <a href="mailto:contact@marinetraffic.example.com"
-       class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold transition">
-        Envoyer un email
-    </a>
+<!-- CTA contact -->
+<section class="py-14">
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+            <h2 class="text-2xl font-bold text-white mb-1">Une question sur le projet ?</h2>
+            <p class="text-gray-400 text-sm">On est disponibles par email pour tout retour ou curiosité.</p>
+        </div>
+        <a href="mailto:contact@marinetraffic.example.com"
+           class="shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold transition text-sm">
+            Nous contacter
+        </a>
+    </div>
 </section>
 
 {% endblock %}
