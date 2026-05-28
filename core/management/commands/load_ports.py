@@ -3,6 +3,7 @@ import io
 import urllib.request
 from django.core.management.base import BaseCommand
 from core.models import Port
+from django.db.models import Count
 
 #url WPI (World Port Index) pour télécharger le csv
 WPI_CSV_URL = (
@@ -18,6 +19,7 @@ COL_CANDIDATES = {
     "country": ["country_code", "country code", "country", "cty_code"],
     "region": ["region_name", "region name", "region"],
     "wpi": ["world_port_index_number", "world port index number", "wpi_number", "index_number"],
+    "harbor_size": ["harbor size", "harbor_size", "harbour size", "harborsize", "harbour_size"],
 }
 
 # normlaise une chaîne pour comparaison 
@@ -82,7 +84,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             f"Colonnes → nom: '{cols['name']}', lat: '{cols['lat']}', "
-            f"lon: '{cols['lon']}', pays: '{cols['country']}'"
+            f"lon: '{cols['lon']}', pays: '{cols['country']}', "
+            f"harbor_size: '{cols['harbor_size']}'"  # None = colonne non trouvée
         )
 
         created = skipped = errors = 0
@@ -112,6 +115,11 @@ class Command(BaseCommand):
                 # exemple région : "United States E Coast -- 6585" 
                 region = row.get(cols["region"] or "", "").strip() if cols["region"] else ""
 
+                harbor_size = (
+                    row.get(cols["harbor_size"] or "", "").strip()[:1]
+                    if cols["harbor_size"] else ""
+                )
+
                 batch.append(
                     Port(
                         name=name,
@@ -120,6 +128,7 @@ class Command(BaseCommand):
                         latitude=lat,
                         longitude=lon,
                         wpi_number=wpi,
+                        harbor_size=harbor_size,
                     )
                 )
                 created += 1
@@ -142,6 +151,19 @@ class Command(BaseCommand):
                 f"\nTerminé : {created} ports insérés, {skipped} ignorés, {errors} erreurs."
             )
         )
+
+        # vérif size
+        stats = (
+            Port.objects.values("harbor_size")
+            .annotate(n=Count("id"))
+            .order_by("-n")
+        )
+        dist = ", ".join(
+            f"{s['harbor_size'] or '(vide)'}={s['n']}" for s in stats
+        )
+        self.stdout.write(f"  harbor_size : {dist}")
+        if not Port.objects.exclude(harbor_size="").exists():
+            self.stderr.write(self.style.WARNING("Tous les harbor_size sont vides !\n"))
 
     @classmethod
     def _detect_columns(cls, fieldnames: list) -> dict:
