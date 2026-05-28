@@ -10,34 +10,53 @@ INPUT_CLASS = (
 
 
 class RegisterForm(UserCreationForm):
+    first_name = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Prénom'}),
+    )
+    last_name = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Nom'}),
+    )
     email = forms.EmailField(
         required=True,
-        widget=forms.EmailInput(attrs={
-            'class': INPUT_CLASS,
-            'placeholder': 'votre@email.com',
-        })
+        widget=forms.EmailInput(attrs={'class': INPUT_CLASS, 'placeholder': 'votre@email.com'}),
     )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2')
+        fields = ('first_name', 'last_name', 'email', 'password1', 'password2')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        placeholders = {
-            'username': "Nom d'utilisateur",
-            'password1': 'Mot de passe',
-            'password2': 'Confirmer le mot de passe',
-        }
-        for field, placeholder in placeholders.items():
-            self.fields[field].widget.attrs.update({
-                'class': INPUT_CLASS,
-                'placeholder': placeholder,
-            })
+        self.fields['password1'].widget.attrs.update({
+            'class': INPUT_CLASS,
+            'placeholder': 'Mot de passe',
+        })
+        self.fields['password2'].widget.attrs.update({
+            'class': INPUT_CLASS,
+            'placeholder': 'Confirmer le mot de passe',
+        })
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('Cette adresse email est déjà utilisée.')
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
         user.email = self.cleaned_data['email']
+        # Génère un username unique à partir de l'email
+        base = self.cleaned_data['email'].split('@')[0]
+        username = base
+        n = 1
+        while User.objects.filter(username=username).exists():
+            username = f'{base}{n}'
+            n += 1
+        user.username = username
         if commit:
             user.save()
         return user
