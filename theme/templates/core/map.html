@@ -24,13 +24,18 @@
 
     <!-- légende -->
     <div class="flex items-center gap-6 text-xs text-gray-400">
-        <span class="flex items-center gap-1">
-            <span class="text-base">🚢</span> 
-            Navire
+        <span class="flex items-center gap-1"><span class="text-base">🚢</span> Navire</span>
+        <span class="flex items-center gap-2">
+            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-600"></span>
+            Grand port (L)
         </span>
         <span class="flex items-center gap-2">
-            <span class="">⚓</span>
-            Port
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-400 border border-orange-600"></span>
+            Port moyen (M)
+        </span>
+        <span class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-blue-400 border border-blue-600"></span>
+            Petit port (S/V)
         </span>
     </div>
 
@@ -51,23 +56,87 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- Axios -->
 <script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
-<!-- icone font-awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <script>
 (function () {
+    'use strict';
+
+    // config cache
+    const CACHE_TTL_MS   = 10 * 60 * 1000; // 10 minutes
+    const CACHE_PREFIX   = 'mt_ports_'; // clé localStorage
+    const MAX_CACHE_KEYS = 80; // nettoyage si dépassé
+
+    // Zoom bucket = densité affichée
+    // ≤3 : grands ports seulement, plus ça zoom, plus petit port
+    function getZoomBucket(z) {
+        if (z <= 3) return 3;
+        if (z <= 5) return 5;
+        if (z <= 8) return 8;
+        return 10;
+    }
+
+    // Arrondi de la bbox selon le zoom 
+    function getBboxStep(z) {
+        if (z <= 3) return 20;
+        if (z <= 5) return 10;
+        if (z <= 8) return 5;
+        return 2;
+    }
+
+    function roundedBbox(bounds, step) {
+        return {
+            south: Math.floor(bounds.getSouth() / step) * step,
+            west:  Math.floor(bounds.getWest()  / step) * step,
+            north: Math.ceil (bounds.getNorth() / step) * step,
+            east:  Math.ceil (bounds.getEast()  / step) * step,
+        };
+    }
+
+    function cacheKey(bucket, bbox) {
+        return `${CACHE_PREFIX}${bucket}_${bbox.south}_${bbox.west}_${bbox.north}_${bbox.east}`;
+    }
+
+    // récup les données en cache
+    function cacheGet(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            const { ts, ports } = JSON.parse(raw);
+            if (Date.now() - ts > CACHE_TTL_MS) {
+                localStorage.removeItem(key);
+                return null;
+            }
+            return ports;
+        } catch { return null; }
+    }
+
+    function cacheSet(key, ports) {
+        try {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
+            // si on dépasse le max, trie par timestamp et supprime les plus anciennes
+            if (keys.length >= MAX_CACHE_KEYS) {
+                const entries = keys.map(k => {
+                    try { return { k, ts: JSON.parse(localStorage.getItem(k)).ts }; }
+                    catch { return { k, ts: 0 }; }
+                }).sort((a, b) => a.ts - b.ts);
+                entries.slice(0, 20).forEach(e => localStorage.removeItem(e.k));
+            }
+            localStorage.setItem(key, JSON.stringify({ ts: Date.now(), ports }));
+        } catch (e) {
+            // vide tout si dépassé
+            Object.keys(localStorage)
+                .filter(k => k.startsWith(CACHE_PREFIX))
+                .forEach(k => localStorage.removeItem(k));
+        }
+    }
+
     // --- Paramètres depuis l'URL (lien depuis la page /ports/) ---
     const params = new URLSearchParams(window.location.search);
-    const initLat = parseFloat(params.get('lat')) || 36.0;
-    const initLng = parseFloat(params.get('lng')) || 14.0;
-    const initZoom = parseInt(params.get('zoom')) || 5;
+    const initLat = parseFloat(params.get('lat'))  || 36.0;
+    const initLng = parseFloat(params.get('lng'))  || 14.0;
+    const initZoom = parseInt (params.get('zoom')) || 5;
 
-    // --- Initialisation de la carte ---
-    const map = L.map('map', {
-        center: [initLat, initLng],
-        zoom: initZoom,
-        zoomControl: true,
-    });
+    const map = L.map('map', { center: [initLat, initLng], zoom: initZoom });
 
     // Tuiles OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -107,54 +176,97 @@
 
     // tout les ports
     const portsLayer = L.layerGroup().addTo(map);
-    let portsLoaded = false;
+    let portLayerVisible = true;
+    let currentBucket   = -1;
+    const loadedKeys    = new Set();   // tuiles déjà affichées (session)
 
-    function loadPorts() {
-        if (portsLoaded) return;
-        portsLoaded = true;
-
-        axios.get('/api/ports/')
-            .then(response => {
-                response.data.ports.forEach(port => {
-                    const marker = L.marker([port.latitude, port.longitude], {
-                        icon: L.divIcon({
-                            className: 'emoji-marker',
-                            html: `<div style="
-                                background: white;
-                                border-radius: 50%;
-                                width: 14px;
-                                height: 14px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-                                font-size: 12px;
-                            ">⚓</div>`,
-                            iconSize: [14, 14],
-                            iconAnchor: [10, 10],
-                        })
-                    });
-
-                    marker.bindPopup(`
-                        <div style="font-family:sans-serif; min-width:160px;">
-                            <strong><i class="fa-solid fa-anchor"></i> ${port.name}</strong><br>
-                            <i class="fa-solid fa-flag"></i> Pays : <strong>${port.country || '—'}</strong><br>
-                            <i class="fa-solid fa-globe"></i> Région : ${port.region || '—'}<br>
-                            <i class="fa-solid fa-location-dot"></i> ${port.latitude.toFixed(4)}, ${port.longitude.toFixed(4)}
-                        </div>
-                    `);
-
-                    portsLayer.addLayer(marker);
-                });
-            })
-            .catch(err => console.error('Erreur chargement ports :', err.message));
+    // style selon taille du port
+    function portStyle(size) {
+        switch (size) {
+            case 'L': return { radius: 9, fillColor: '#facc15', color: '#a16207', weight: 1.5 };
+            case 'M': return { radius: 7, fillColor: '#fb923c', color: '#c2410c', weight: 1 };
+            case 'S': return { radius: 5, fillColor: '#60a5fa', color: '#1d4ed8', weight: 1 };
+            default:  return { radius: 3, fillColor: '#94a3b8', color: '#475569', weight: 1 };
+        }
     }
-    loadPorts();
+
+    // marque les ports sur la carte
+    function addPortMarkers(ports) {
+        ports.forEach(port => {
+            const style  = portStyle(port.harbor_size);
+            const marker = L.circleMarker([port.latitude, port.longitude], {
+                ...style,
+                opacity: 0.9,
+                fillOpacity: 0.8,
+            });
+            marker.bindPopup(`
+                <div style="font-family:sans-serif;min-width:165px;line-height:1.6">
+                    <strong style="font-size:13px">⚓ ${port.name}</strong><br>
+                    🏳️ <strong>${port.country || '—'}</strong><br>
+                    🌍 ${port.region || '—'}<br>
+                    📍 <span style="font-size:11px;color:#666">${port.latitude.toFixed(4)}, ${port.longitude.toFixed(4)}</span>
+                </div>
+            `, { maxWidth: 220 });
+            portsLayer.addLayer(marker);
+        });
+    }
+
+    async function loadPortsForView() {
+        if (!portLayerVisible) return;
+
+        const zoom   = map.getZoom();
+        const bucket = getZoomBucket(zoom);
+
+        // si changement de zoom, vider le cache
+        if (bucket !== currentBucket) {
+            portsLayer.clearLayers();
+            loadedKeys.clear();
+            currentBucket = bucket;
+        }
+
+        const step   = getBboxStep(zoom);
+        const bounds = map.getBounds();
+        const bbox   = roundedBbox(bounds, step);
+        const key    = cacheKey(bucket, bbox);
+
+        // si tuile déjà affichée dans cette session
+        if (loadedKeys.has(key)) return;
+        loadedKeys.add(key);
+
+        // Données en cache localStorage 
+        const cached = cacheGet(key);
+        if (cached) {
+            addPortMarkers(cached);
+            return;
+        }
+
+        try {
+            const res = await axios.get('/api/ports/', {
+                params: {
+                    bbox: `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`,
+                    zoom,
+                },
+            });
+            const ports = res.data.ports;
+            cacheSet(key, ports);
+            addPortMarkers(ports);
+        } catch (err) {
+            console.error('Erreur chargement ports :', err.message);
+            loadedKeys.delete(key);  
+        }
+    }
+
+    // chargement à chaque fin de déplacement / zoom
+    map.on('moveend', loadPortsForView);
+    map.on('zoomend', loadPortsForView);
+
+    loadPortsForView();
 
     document.getElementById('togglePorts').addEventListener('change', function () {
-        if (this.checked) {
+        portLayerVisible = this.checked;
+        if (portLayerVisible) {
             map.addLayer(portsLayer);
-            loadPorts();
+            loadPortsForView();
         } else {
             map.removeLayer(portsLayer);
         }
