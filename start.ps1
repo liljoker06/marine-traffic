@@ -1,7 +1,7 @@
 # Script de lancement du projet Marine Traffic
 Write-Host "Lancement du projet Marine Traffic..." -ForegroundColor Cyan
 
-$projectPath = "c:\Users\Ahmad\marine-traffic"
+$projectPath = $PSScriptRoot
 
 # Lancer Tailwind dans un terminal séparé
 Write-Host "Démarrage de Tailwind CSS..." -ForegroundColor Yellow
