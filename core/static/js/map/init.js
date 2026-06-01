@@ -94,9 +94,7 @@
         } catch { return 0; }
     };
 
-    window.mapClearTrack = () => {
-        trackLayer.clearLayers();
-        map.removeLayer(trackLayer);
-    };
+    window.mapClearTrack    = () => { trackLayer.clearLayers(); map.removeLayer(trackLayer); };
+    window.mapDeselectShip  = () => { shipLayer._selected = null; };
 
 })();

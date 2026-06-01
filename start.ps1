@@ -25,15 +25,15 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", `
 
 Start-Sleep -Seconds 2
 
-# ── Django ASGI (WebSocket + static files) ────────────────────────────────────
-Write-Host "[3/4] Django (migrate + runserver)..." -ForegroundColor Green
+# ── Django ASGI via Daphne (HTTP + WebSocket + static files) ──────────────────
+Write-Host "[3/4] Django (migrate + daphne)..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit", "-Command", `
     "Set-Location '$projectPath'; `
     .\venv\Scripts\Activate.ps1; `
     python manage.py migrate; `
     python manage.py load_ports --if-empty; `
-    Write-Host '>>> Django http://127.0.0.1:8000' -ForegroundColor Green; `
-    python manage.py runserver"
+    Write-Host '>>> Daphne ASGI http://127.0.0.1:8000' -ForegroundColor Green; `
+    daphne -b 127.0.0.1 -p 8000 marine_traffic.asgi:application"
 
 Start-Sleep -Seconds 4
 

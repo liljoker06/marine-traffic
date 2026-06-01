@@ -85,6 +85,7 @@ function detailPanel() {
             this.open = false;
             this.shipPhoto = null;
             window.mapClearTrack();
+            window.mapDeselectShip?.();
         },
 
         async _fetchShipPhoto(name) {

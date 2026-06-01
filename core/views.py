@@ -263,7 +263,8 @@ def wikipedia_proxy(request):
 def ship_photo_proxy(request):
     """
     Cherche une photo du navire sur Wikimedia Commons.
-    Résultat mis en cache 1h pour éviter les appels répétés.
+    Essaie plusieurs variantes du nom (MV, MS, Ship...).
+    Résultat mis en cache 1h.
     """
     from django.core.cache import cache
 
@@ -276,33 +277,47 @@ def ship_photo_proxy(request):
     if cached is not None:
         return JsonResponse(cached) if cached else JsonResponse({"error": "not found"}, status=404)
 
-    try:
-        encoded = urllib.parse.quote(f"{name} ship", safe="")
+    # Variantes de recherche — du plus précis au plus générique
+    queries = [
+        f"{name} ship",
+        f"MV {name}",
+        f"MS {name}",
+        f"SS {name}",
+        f"{name} vessel",
+        name,
+    ]
+
+    def _wikimedia_search(q):
+        encoded = urllib.parse.quote(q, safe="")
         req = urllib.request.Request(
             f"https://commons.wikimedia.org/w/api.php"
             f"?action=query&generator=search&gsrnamespace=6"
             f"&gsrsearch={encoded}&prop=imageinfo"
-            f"&iiprop=url&iiurlwidth=480&format=json&gsrlimit=8&origin=*",
+            f"&iiprop=url&iiurlwidth=600&format=json&gsrlimit=10&origin=*",
             headers={"User-Agent": "MarineTrafficApp/1.0"},
         )
         with urllib.request.urlopen(req, timeout=3) as r:
-            data = json.loads(r.read())
+            return json.loads(r.read())
 
-        pages = data.get("query", {}).get("pages", {})
-        for page in pages.values():
-            info  = (page.get("imageinfo") or [{}])[0]
-            url   = info.get("url", "")
-            thumb = info.get("thumburl", "")
-            if thumb and not url.lower().endswith(".svg"):
-                result = {
-                    "url":   url,
-                    "thumb": thumb,
-                    "page":  f"https://commons.wikimedia.org/wiki/{urllib.parse.quote(page.get('title', ''), safe=':')}",
-                }
-                cache.set(cache_key, result, 3600)
-                return JsonResponse(result)
-    except Exception:
-        pass
+    for q in queries:
+        try:
+            data  = _wikimedia_search(q)
+            pages = data.get("query", {}).get("pages", {})
+            for page in sorted(pages.values(), key=lambda p: p.get("index", 99)):
+                info  = (page.get("imageinfo") or [{}])[0]
+                url   = info.get("url", "").lower()
+                thumb = info.get("thumburl", "")
+                if thumb and not url.endswith(".svg") and not url.endswith(".gif") \
+                        and not url.endswith(".ogg") and not url.endswith(".webm"):
+                    result = {
+                        "url":   info.get("url", ""),
+                        "thumb": thumb,
+                        "page":  f"https://commons.wikimedia.org/wiki/{urllib.parse.quote(page.get('title',''), safe=':')}",
+                    }
+                    cache.set(cache_key, result, 3600)
+                    return JsonResponse(result)
+        except Exception:
+            continue
 
     cache.set(cache_key, None, 3600)
     return JsonResponse({"error": "not found"}, status=404)

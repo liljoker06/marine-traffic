@@ -122,11 +122,12 @@ Le script démarre automatiquement dans l'ordre :
 |-------|---------|-------------|
 | 1 | Docker | Kafka + Redis + Spark + AKHQ |
 | 2 | Tailwind | Compilation CSS en watch mode |
-| 3 | Django | migrate + load_ports + runserver |
+| 3 | Daphne | migrate + load_ports + serveur ASGI (HTTP + WebSocket) |
 | 4 | Producer AIS | aisstream.io → Kafka `ais-raw` |
 | 5 | Consumer Kafka | `ais-positions` → DB + WebSocket |
 
 > Spark (dans Docker) lit `ais-raw`, filtre/enrichit, écrit dans `ais-positions`.
+> `runserver` ne supporte pas les WebSockets avec channels v4 — `daphne` est requis.
 
 ---
 
