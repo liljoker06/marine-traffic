@@ -7,18 +7,20 @@
     <title>{% block title %}Marine Traffic{% endblock %}</title>
     {% tailwind_css %}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% block extra_head %}{% endblock %}
 </head>
 
-<body class="bg-gray-950 text-white min-h-screen flex flex-col">
+<body class="{% block body_class %}bg-gray-950 text-white min-h-screen flex flex-col{% endblock %}">
 
     <!-- Navbar -->
     {% include "components/navbar.html" %}
 
     <!-- Contenu principal -->
-    <main class="flex-1 container mx-auto px-4 py-8">
+    <main class="{% block main_class %}flex-1 container mx-auto px-4 py-8{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 
+    {% block footer %}
     <!-- Footer -->
     <footer class="bg-gray-900 border-t border-gray-800 text-gray-400 text-sm">
         <div class="container mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -77,6 +79,7 @@
             © 2025 Marine Traffic — Tous droits réservés
         </div>
     </footer>
+    {% endblock %}
 
     {% block extra_js %}{% endblock %}
 </body>

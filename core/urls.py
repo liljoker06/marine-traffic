@@ -14,4 +14,9 @@ urlpatterns = [
     #  Ports
     path("ports/", views.ports_list, name="ports_list"),
     path("api/ports/", views.ports_api, name="ports_api"),
+    path("api/ports/search/", views.ports_search_api, name="ports_search_api"),
+    path("api/ships/", views.ships_api, name="ships_api"),
+    path("api/ships/<str:mmsi>/track/", views.ship_track_api, name="ship_track_api"),
+    path("api/wikipedia/", views.wikipedia_proxy, name="wikipedia_proxy"),
+    path("api/ship-photo/", views.ship_photo_proxy, name="ship_photo_proxy"),
 ]

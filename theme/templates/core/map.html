@@ -1,277 +1,36 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Carte — Marine Traffic{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .leaflet-container { background: #1a1f2e; }
+    .panel-scroll::-webkit-scrollbar       { width: 4px; }
+    .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-gray-950 text-white h-screen flex flex-col overflow-hidden{% endblock %}
+{% block main_class %}flex-1 relative overflow-hidden{% endblock %}
+{% block footer %}{% endblock %}
+
 {% block content %}
-
-<div class="flex flex-col gap-4">
-
-    <!-- Header -->
-    <div class="flex items-center justify-between flex-wrap gap-3">
-        <h1 class="text-2xl font-bold text-white">🗺️ Carte maritime en temps réel</h1>
-        <div class="flex items-center gap-4">
-            <!-- on/off ports -->
-            <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300">
-                <input type="checkbox" id="togglePorts" checked class="accent-yellow-400 w-4 h-4" />
-                <span>⚓ Ports</span>
-            </label>
-            <span class="text-sm text-green-400 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"></span>
-                En direct
-            </span>
-        </div>
-    </div>
-
-    <!-- légende -->
-    <div class="flex items-center gap-6 text-xs text-gray-400">
-        <span class="flex items-center gap-1"><span class="text-base">🚢</span> Navire</span>
-        <span class="flex items-center gap-2">
-            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-600"></span>
-            Grand port (L)
-        </span>
-        <span class="flex items-center gap-2">
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-400 border border-orange-600"></span>
-            Port moyen (M)
-        </span>
-        <span class="flex items-center gap-2">
-            <span class="inline-block w-2 h-2 rounded-full bg-blue-400 border border-blue-600"></span>
-            Petit port (S/V)
-        </span>
-    </div>
-
-    <!-- Map Container -->
-    <div id="map" class="w-full rounded-2xl border border-gray-800 shadow-xl z-0"
-         style="height: 75vh;">
-    </div>
-
-</div>
-
+{% include "components/map_panel_left.html" %}
+{% include "components/map_panel_right.html" %}
+<div id="map" class="absolute inset-0 z-0"></div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Axios -->
 <script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
-
-<script>
-(function () {
-    'use strict';
-
-    // config cache
-    const CACHE_TTL_MS   = 10 * 60 * 1000; // 10 minutes
-    const CACHE_PREFIX   = 'mt_ports_'; // clé localStorage
-    const MAX_CACHE_KEYS = 80; // nettoyage si dépassé
-
-    // Zoom bucket = densité affichée
-    // ≤3 : grands ports seulement, plus ça zoom, plus petit port
-    function getZoomBucket(z) {
-        if (z <= 3) return 3;
-        if (z <= 5) return 5;
-        if (z <= 8) return 8;
-        return 10;
-    }
-
-    // Arrondi de la bbox selon le zoom 
-    function getBboxStep(z) {
-        if (z <= 3) return 20;
-        if (z <= 5) return 10;
-        if (z <= 8) return 5;
-        return 2;
-    }
-
-    function roundedBbox(bounds, step) {
-        return {
-            south: Math.floor(bounds.getSouth() / step) * step,
-            west:  Math.floor(bounds.getWest()  / step) * step,
-            north: Math.ceil (bounds.getNorth() / step) * step,
-            east:  Math.ceil (bounds.getEast()  / step) * step,
-        };
-    }
-
-    function cacheKey(bucket, bbox) {
-        return `${CACHE_PREFIX}${bucket}_${bbox.south}_${bbox.west}_${bbox.north}_${bbox.east}`;
-    }
-
-    // récup les données en cache
-    function cacheGet(key) {
-        try {
-            const raw = localStorage.getItem(key);
-            if (!raw) return null;
-            const { ts, ports } = JSON.parse(raw);
-            if (Date.now() - ts > CACHE_TTL_MS) {
-                localStorage.removeItem(key);
-                return null;
-            }
-            return ports;
-        } catch { return null; }
-    }
-
-    function cacheSet(key, ports) {
-        try {
-            const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-            // si on dépasse le max, trie par timestamp et supprime les plus anciennes
-            if (keys.length >= MAX_CACHE_KEYS) {
-                const entries = keys.map(k => {
-                    try { return { k, ts: JSON.parse(localStorage.getItem(k)).ts }; }
-                    catch { return { k, ts: 0 }; }
-                }).sort((a, b) => a.ts - b.ts);
-                entries.slice(0, 20).forEach(e => localStorage.removeItem(e.k));
-            }
-            localStorage.setItem(key, JSON.stringify({ ts: Date.now(), ports }));
-        } catch (e) {
-            // vide tout si dépassé
-            Object.keys(localStorage)
-                .filter(k => k.startsWith(CACHE_PREFIX))
-                .forEach(k => localStorage.removeItem(k));
-        }
-    }
-
-    // --- Paramètres depuis l'URL (lien depuis la page /ports/) ---
-    const params = new URLSearchParams(window.location.search);
-    const initLat = parseFloat(params.get('lat'))  || 36.0;
-    const initLng = parseFloat(params.get('lng'))  || 14.0;
-    const initZoom = parseInt (params.get('zoom')) || 5;
-
-    const map = L.map('map', { center: [initLat, initLng], zoom: initZoom });
-
-    // Tuiles OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18,
-    }).addTo(map);
-
-    // Exemple de navire (marker)
-    const shipIcon = L.divIcon({
-        html: '🚢',
-        className: '',
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-    });
-
-    L.marker([36.8, 10.2], { icon: shipIcon })
-        .addTo(map)
-        .bindPopup(`
-            <div style="font-family:sans-serif; min-width:150px;">
-                <strong>MSC Tunis</strong><br>
-                🏴 Pavillon : Tunisie<br>
-                ⚓ Statut : En route<br>
-                🕐 Mis à jour : il y a 2 min
-            </div>
-        `);
-
-    L.marker([35.9, 14.5], { icon: shipIcon })
-        .addTo(map)
-        .bindPopup(`
-            <div style="font-family:sans-serif; min-width:150px;">
-                <strong>Atlantic Star</strong><br>
-                🏴 Pavillon : Malte<br>
-                ⚓ Statut : À quai<br>
-                🕐 Mis à jour : il y a 5 min
-            </div>
-        `);
-
-    // tout les ports
-    const portsLayer = L.layerGroup().addTo(map);
-    let portLayerVisible = true;
-    let currentBucket   = -1;
-    const loadedKeys    = new Set();   // tuiles déjà affichées (session)
-
-    // style selon taille du port
-    function portStyle(size) {
-        switch (size) {
-            case 'L': return { radius: 9, fillColor: '#facc15', color: '#a16207', weight: 1.5 };
-            case 'M': return { radius: 7, fillColor: '#fb923c', color: '#c2410c', weight: 1 };
-            case 'S': return { radius: 5, fillColor: '#60a5fa', color: '#1d4ed8', weight: 1 };
-            default:  return { radius: 3, fillColor: '#94a3b8', color: '#475569', weight: 1 };
-        }
-    }
-
-    // marque les ports sur la carte
-    function addPortMarkers(ports) {
-        ports.forEach(port => {
-            const style  = portStyle(port.harbor_size);
-            const marker = L.circleMarker([port.latitude, port.longitude], {
-                ...style,
-                opacity: 0.9,
-                fillOpacity: 0.8,
-            });
-            marker.bindPopup(`
-                <div style="font-family:sans-serif;min-width:165px;line-height:1.6">
-                    <strong style="font-size:13px">⚓ ${port.name}</strong><br>
-                    🏳️ <strong>${port.country || '—'}</strong><br>
-                    🌍 ${port.region || '—'}<br>
-                    📍 <span style="font-size:11px;color:#666">${port.latitude.toFixed(4)}, ${port.longitude.toFixed(4)}</span>
-                </div>
-            `, { maxWidth: 220 });
-            portsLayer.addLayer(marker);
-        });
-    }
-
-    async function loadPortsForView() {
-        if (!portLayerVisible) return;
-
-        const zoom   = map.getZoom();
-        const bucket = getZoomBucket(zoom);
-
-        // si changement de zoom, vider le cache
-        if (bucket !== currentBucket) {
-            portsLayer.clearLayers();
-            loadedKeys.clear();
-            currentBucket = bucket;
-        }
-
-        const step   = getBboxStep(zoom);
-        const bounds = map.getBounds();
-        const bbox   = roundedBbox(bounds, step);
-        const key    = cacheKey(bucket, bbox);
-
-        // si tuile déjà affichée dans cette session
-        if (loadedKeys.has(key)) return;
-        loadedKeys.add(key);
-
-        // Données en cache localStorage 
-        const cached = cacheGet(key);
-        if (cached) {
-            addPortMarkers(cached);
-            return;
-        }
-
-        try {
-            const res = await axios.get('/api/ports/', {
-                params: {
-                    bbox: `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`,
-                    zoom,
-                },
-            });
-            const ports = res.data.ports;
-            cacheSet(key, ports);
-            addPortMarkers(ports);
-        } catch (err) {
-            console.error('Erreur chargement ports :', err.message);
-            loadedKeys.delete(key);  
-        }
-    }
-
-    // chargement à chaque fin de déplacement / zoom
-    map.on('moveend', loadPortsForView);
-    map.on('zoomend', loadPortsForView);
-
-    loadPortsForView();
-
-    document.getElementById('togglePorts').addEventListener('change', function () {
-        portLayerVisible = this.checked;
-        if (portLayerVisible) {
-            map.addLayer(portsLayer);
-            loadPortsForView();
-        } else {
-            map.removeLayer(portsLayer);
-        }
-    });
-
-})();
-</script>
+<script src="{% static 'js/map/cache.js' %}"></script>
+<script src="{% static 'js/map/api.js' %}"></script>
+<script src="{% static 'js/map/ship-layer.js' %}"></script>
+<script src="{% static 'js/map/port-layer.js' %}"></script>
+<script src="{% static 'js/map/websocket.js' %}"></script>
+<script src="{% static 'js/map/panels.js' %}"></script>
+<script src="{% static 'js/map/init.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,59 @@
+services:
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # AKHQ — interface web Kafka : http://localhost:8090
+  akhq:
+    image: tchiotludo/akhq:latest
+    ports:
+      - "8090:8080"
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            marine-traffic:
+              properties:
+                bootstrap.servers: "kafka:29092"
+    depends_on:
+      - kafka
+
+  # Spark — filtre et enrichit les données AIS (Linux, pas de problème Hadoop Windows)
+  spark:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    volumes:
+      - .:/app                   # code source monté pour hot-reload
+      - spark-ivy:/root/.ivy2   # cache JARs Kafka (évite le téléchargement à chaque restart)
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_RAW_TOPIC: ais-raw
+      KAFKA_TOPIC: ais-positions
+    depends_on:
+      - kafka
+    restart: on-failure
+
+volumes:
+  spark-ivy:   # cache persistant des JARs Spark entre les redémarrages

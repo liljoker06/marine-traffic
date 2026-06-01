@@ -1,6 +1,12 @@
+import json
+import urllib.request
+import urllib.parse
+
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.utils import timezone
+from django.views.decorators.http import require_GET
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -8,7 +14,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 
 from .forms import RegisterForm, LoginForm, UserEditForm
-from .models import Port
+from .models import Port, Ship, ShipPosition, SHIP_TYPE_LABELS, NAV_STATUS_LABELS
 
 # ======================================================
 # HOME + MAP
@@ -128,6 +134,178 @@ def ports_api(request):
         qs.values("id", "name", "country", "region", "latitude", "longitude", "harbor_size")
     )
     return JsonResponse({"ports": ports})
+
+
+def ships_api(request):
+    """
+    Retourne les navires dans la bbox visible, mis à jour dans les 6 dernières heures.
+    Fenêtre large pour avoir le maximum de navires dès le chargement.
+    """
+    from datetime import timedelta
+    bbox = request.GET.get('bbox', '')
+    cutoff = timezone.now() - timedelta(hours=6)
+    qs = Ship.objects.filter(last_update__gte=cutoff)
+    if bbox:
+        try:
+            south, west, north, east = map(float, bbox.split(','))
+            qs = qs.filter(
+                latitude__gte=south,  latitude__lte=north,
+                longitude__gte=west,  longitude__lte=east,
+            )
+        except (ValueError, TypeError):
+            pass
+    ships = list(qs.values(
+        'mmsi', 'name', 'ship_type', 'flag',
+        'latitude', 'longitude', 'speed', 'course', 'heading', 'status'
+    ))
+    return JsonResponse({'ships': ships})
+
+
+def ship_track_api(request, mmsi):
+    """
+    Retourne les 50 dernières positions d'un navire (pour tracer sa route).
+    """
+    try:
+        ship = Ship.objects.get(mmsi=mmsi)
+    except Ship.DoesNotExist:
+        return JsonResponse({'ship': None, 'positions': []})
+
+    positions = list(
+        ship.positions
+        .values('latitude', 'longitude', 'speed', 'timestamp')[:50]
+    )
+    return JsonResponse({
+        'ship': {
+            'mmsi':       ship.mmsi,
+            'name':       ship.name,
+            'ship_type':  ship.ship_type,
+            'type_label': SHIP_TYPE_LABELS.get(ship.ship_type, 'Autre'),
+            'status':     ship.status,
+            'status_label': NAV_STATUS_LABELS.get(ship.status, 'Indéfini'),
+            'speed':      ship.speed,
+            'course':     ship.course,
+            'flag':       ship.flag,
+        },
+        'positions': positions,
+    })
+
+
+def ports_search_api(request):
+    q = request.GET.get("q", "").strip()
+    if len(q) < 2:
+        return JsonResponse({"ports": []})
+    ports = list(
+        Port.objects.filter(name__icontains=q)
+        .order_by("name")
+        .values("id", "name", "country", "region", "latitude", "longitude", "harbor_size")[:12]
+    )
+    return JsonResponse({"ports": ports})
+
+
+# ======================================================
+# WIKIPEDIA PROXY
+
+@require_GET
+def wikipedia_proxy(request):
+    """
+    Proxy côté serveur pour l'API Wikipedia.
+    Évite les CORS et ajoute un fallback recherche quand le titre exact est inconnu.
+    """
+    term = request.GET.get("term", "").strip()
+    lang = request.GET.get("lang", "fr")
+    if not term:
+        return JsonResponse({"error": "term required"}, status=400)
+    if lang not in ("fr", "en", "es", "de", "it", "pt", "ar", "zh"):
+        lang = "fr"
+
+    def _fetch(url):
+        req = urllib.request.Request(url, headers={"User-Agent": "MarineTrafficApp/1.0"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            return json.loads(r.read())
+
+    # 1) Lookup direct par titre
+    try:
+        data = _fetch(
+            f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/"
+            f"{urllib.parse.quote(term, safe='')}"
+        )
+        if data.get("type") not in ("disambiguation", None) and data.get("extract"):
+            return JsonResponse(data)
+    except Exception:
+        pass
+
+    # 2) Fallback : recherche textuelle puis summary du premier résultat
+    try:
+        search = _fetch(
+            f"https://{lang}.wikipedia.org/w/api.php"
+            f"?action=query&list=search&srsearch={urllib.parse.quote(term, safe='')}"
+            f"&format=json&srlimit=1&origin=*"
+        )
+        results = search.get("query", {}).get("search", [])
+        if results:
+            title = results[0]["title"]
+            data = _fetch(
+                f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/"
+                f"{urllib.parse.quote(title, safe='')}"
+            )
+            if data.get("extract"):
+                return JsonResponse(data)
+    except Exception:
+        pass
+
+    return JsonResponse({"error": "not found"}, status=404)
+
+
+# ======================================================
+# SHIP PHOTO (Wikimedia Commons)
+
+@require_GET
+def ship_photo_proxy(request):
+    """
+    Cherche une photo du navire sur Wikimedia Commons.
+    Résultat mis en cache 1h pour éviter les appels répétés.
+    """
+    from django.core.cache import cache
+
+    name = request.GET.get("name", "").strip()
+    if not name:
+        return JsonResponse({"error": "name required"}, status=400)
+
+    cache_key = f"ship_photo_{name.lower()}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return JsonResponse(cached) if cached else JsonResponse({"error": "not found"}, status=404)
+
+    try:
+        encoded = urllib.parse.quote(f"{name} ship", safe="")
+        req = urllib.request.Request(
+            f"https://commons.wikimedia.org/w/api.php"
+            f"?action=query&generator=search&gsrnamespace=6"
+            f"&gsrsearch={encoded}&prop=imageinfo"
+            f"&iiprop=url&iiurlwidth=480&format=json&gsrlimit=8&origin=*",
+            headers={"User-Agent": "MarineTrafficApp/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=3) as r:
+            data = json.loads(r.read())
+
+        pages = data.get("query", {}).get("pages", {})
+        for page in pages.values():
+            info  = (page.get("imageinfo") or [{}])[0]
+            url   = info.get("url", "")
+            thumb = info.get("thumburl", "")
+            if thumb and not url.lower().endswith(".svg"):
+                result = {
+                    "url":   url,
+                    "thumb": thumb,
+                    "page":  f"https://commons.wikimedia.org/wiki/{urllib.parse.quote(page.get('title', ''), safe=':')}",
+                }
+                cache.set(cache_key, result, 3600)
+                return JsonResponse(result)
+    except Exception:
+        pass
+
+    cache.set(cache_key, None, 3600)
+    return JsonResponse({"error": "not found"}, status=404)
 
 
 # ======================================================

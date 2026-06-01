@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'theme',
     'django_browser_reload',
     'tailwind',
@@ -136,3 +137,21 @@ LOGOUT_REDIRECT_URL = '/'
 TAILWIND_APP_NAME = 'theme'
 
 INTERNAL_IPS = ['127.0.0.1']
+
+# ── Django Channels ───────────────────────────────────────────────────────────
+ASGI_APPLICATION = 'marine_traffic.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+# ── Kafka + AIS ───────────────────────────────────────────────────────────────
+KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+KAFKA_RAW_TOPIC         = os.getenv('KAFKA_RAW_TOPIC', 'ais-raw')        # données brutes
+KAFKA_TOPIC             = os.getenv('KAFKA_TOPIC', 'ais-positions')       # données filtrées par Spark
+AISSTREAM_API_KEY       = os.getenv('AISSTREAM_API_KEY', 'REPLACED_API_KEY')
