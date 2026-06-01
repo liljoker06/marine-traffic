@@ -1,5 +1,5 @@
 # Script de lancement du projet Marine Traffic
-# Prérequis : Docker en cours d'exécution (Kafka + Redis + Spark + AKHQ)
+# Prérequis : Docker en cours d'exécution
 
 $projectPath = $PSScriptRoot
 
@@ -7,12 +7,14 @@ Write-Host ""
 Write-Host "Marine Traffic — Lancement" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor DarkGray
 
-# ── Docker (Kafka + Redis + Spark + AKHQ) ─────────────────────────────────────
+# ── Docker (Kafka + Redis + Spark + AKHQ + Prometheus + Grafana) ──────────────
 Write-Host ""
-Write-Host "[1/4] Docker — Kafka, Redis, Spark, AKHQ..." -ForegroundColor Yellow
+Write-Host "[1/4] Docker — Kafka, Redis, Spark, AKHQ, Prometheus, Grafana..." -ForegroundColor Yellow
 Set-Location $projectPath
 docker compose up -d
-Write-Host "      AKHQ : http://localhost:8090" -ForegroundColor DarkGray
+Write-Host "      AKHQ       : http://localhost:8090" -ForegroundColor DarkGray
+Write-Host "      Prometheus : http://localhost:9090" -ForegroundColor DarkGray
+Write-Host "      Grafana    : http://localhost:3000  (admin/admin)" -ForegroundColor DarkGray
 Start-Sleep -Seconds 5
 
 # ── Tailwind CSS ───────────────────────────────────────────────────────────────
@@ -59,8 +61,10 @@ Write-Host ""
 Write-Host "==========================================" -ForegroundColor DarkGray
 Write-Host "Tout est lance !" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  App    : http://127.0.0.1:8000" -ForegroundColor White
-Write-Host "  Kafka  : http://localhost:8090  (AKHQ)" -ForegroundColor White
+Write-Host "  App         : http://127.0.0.1:8000" -ForegroundColor White
+Write-Host "  AKHQ        : http://localhost:8090" -ForegroundColor White
+Write-Host "  Prometheus  : http://localhost:9090" -ForegroundColor White
+Write-Host "  Grafana     : http://localhost:3000  (admin/admin)" -ForegroundColor White
 Write-Host ""
 Write-Host "  Pipeline AIS :" -ForegroundColor DarkGray
 Write-Host "  aisstream.io -> ais-raw -> [Spark Docker] -> ais-positions -> DB -> WebSocket" -ForegroundColor DarkGray
