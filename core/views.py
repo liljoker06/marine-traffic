@@ -257,69 +257,89 @@ def wikipedia_proxy(request):
 
 
 # ======================================================
-# SHIP PHOTO (Wikimedia Commons)
+# SHIP PHOTO (DuckDuckGo Images JSON)
+
+def _ddg_image_search(name):
+    import re, http.cookiejar
+
+    UA = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
+    query = f"{name} ship"
+    encoded = urllib.parse.quote_plus(query)
+
+    # Cookie jar partagé — DDG exige les cookies de la page 1 pour autoriser /i.js
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+    )
+
+    # Étape 1 : récupérer le token vqd
+    req1 = urllib.request.Request(
+        f"https://duckduckgo.com/?q={encoded}&iax=images&ia=images",
+        headers={
+            "User-Agent": UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        },
+    )
+    with opener.open(req1, timeout=6) as r:
+        html = r.read().decode("utf-8", errors="ignore")
+
+    vqd = re.search(r'vqd="([^"]+)"', html) or re.search(r"vqd='([^']+)'", html)
+    if not vqd:
+        return None
+
+    # Étape 2 : endpoint JSON images
+    params = urllib.parse.urlencode({
+        "q": query,
+        "vqd": vqd.group(1),
+        "iax": "images",
+        "ia": "images",
+        "f": ",,,,,",
+    })
+    req2 = urllib.request.Request(
+        f"https://duckduckgo.com/i.js?{params}",
+        headers={
+            "User-Agent": UA,
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Referer": f"https://duckduckgo.com/?q={encoded}&iax=images&ia=images",
+            "X-Requested-With": "XMLHttpRequest",
+        },
+    )
+    with opener.open(req2, timeout=6) as r:
+        data = json.loads(r.read())
+
+    results = data.get("results", [])
+    return results[0].get("image") if results else None
+
 
 @require_GET
 def ship_photo_proxy(request):
-    """
-    Cherche une photo du navire sur Wikimedia Commons.
-    Essaie plusieurs variantes du nom (MV, MS, Ship...).
-    Résultat mis en cache 1h.
-    """
+    import logging
     from django.core.cache import cache
 
-    name = request.GET.get("name", "").strip()
+    name = request.GET.get("name", "").strip().strip('"')
     if not name:
         return JsonResponse({"error": "name required"}, status=400)
 
-    cache_key = f"ship_photo_{name.lower()}"
+    cache_key = f"ship_photo_ddg_{name.lower()}"
     cached = cache.get(cache_key)
     if cached is not None:
         return JsonResponse(cached) if cached else JsonResponse({"error": "not found"}, status=404)
 
-    # Variantes de recherche — du plus précis au plus générique
-    queries = [
-        f"{name} ship",
-        f"MV {name}",
-        f"MS {name}",
-        f"SS {name}",
-        f"{name} vessel",
-        name,
-    ]
+    try:
+        img_url = _ddg_image_search(name)
+        if img_url:
+            result = {"url": img_url, "thumb": img_url}
+            cache.set(cache_key, result, 3600)
+            return JsonResponse(result)
+    except Exception as e:
+        logging.getLogger(__name__).error("ship_photo_proxy error for %r: %s", name, e, exc_info=True)
 
-    def _wikimedia_search(q):
-        encoded = urllib.parse.quote(q, safe="")
-        req = urllib.request.Request(
-            f"https://commons.wikimedia.org/w/api.php"
-            f"?action=query&generator=search&gsrnamespace=6"
-            f"&gsrsearch={encoded}&prop=imageinfo"
-            f"&iiprop=url&iiurlwidth=600&format=json&gsrlimit=10&origin=*",
-            headers={"User-Agent": "MarineTrafficApp/1.0"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as r:
-            return json.loads(r.read())
-
-    for q in queries:
-        try:
-            data  = _wikimedia_search(q)
-            pages = data.get("query", {}).get("pages", {})
-            for page in sorted(pages.values(), key=lambda p: p.get("index", 99)):
-                info  = (page.get("imageinfo") or [{}])[0]
-                url   = info.get("url", "").lower()
-                thumb = info.get("thumburl", "")
-                if thumb and not url.endswith(".svg") and not url.endswith(".gif") \
-                        and not url.endswith(".ogg") and not url.endswith(".webm"):
-                    result = {
-                        "url":   info.get("url", ""),
-                        "thumb": thumb,
-                        "page":  f"https://commons.wikimedia.org/wiki/{urllib.parse.quote(page.get('title',''), safe=':')}",
-                    }
-                    cache.set(cache_key, result, 3600)
-                    return JsonResponse(result)
-        except Exception:
-            continue
-
-    cache.set(cache_key, None, 3600)
+    cache.set(cache_key, False, 3600)
     return JsonResponse({"error": "not found"}, status=404)
 
 
